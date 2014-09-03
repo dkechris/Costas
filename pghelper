@@ -1,0 +1,97 @@
+// lib/pghelper/index.js
+
+var pg = require("pg");
+var config = require('../configuration');
+configO = config.get("postgres");
+
+// returns a function with a callback for async module usage
+function testQueryRows(string, name){
+    return function(callback) {
+        var res = {name: name, columns: [], rows: []};
+        pg.connect(configO, function (error, client, done) {
+            var query = client.query(string);
+            query.on("row", function (row) {
+                res.rows.push(testRowToArray(row));
+            });
+            query.on("error", function (error) {
+                console.log(string);
+                console.log(error);
+                callback(null,{status:400,error:name + ': ' + error.message});
+            });
+            query.on("end", function (result) {
+                done();
+                res.columns = testFieldsToArray(result.fields);
+                callback(null,res);
+            });
+        });
+    };
+}
+
+// returns a function with a callback for async module usage
+function testQuerySingleRow(string, name){
+    return function(callback) {
+        var res = null;
+        pg.connect(configO, function (error, client, done) {
+            var query = client.query(string);
+            query.on("row", function (row, result) {
+                res=row;
+            });
+            query.on("error", function (error) {
+                console.log(string);
+                console.log(error);
+                callback(null,{status:400,error:name + ': ' + error.message});
+            });
+            query.on("end", function (result) {
+                done();
+                callback(null,res);
+            });
+        });
+    };
+}
+
+function testRowToArray(row){
+    var res = [];
+    for(var i in row){
+        res.push(row[i]);
+    }
+    return res;
+}
+
+function testFieldsToArray(fields){
+    var res = [];
+    for(var i in fields){
+        var name = fields[i].name;
+        res.push({colName:name,index:i});
+    }
+    return res;
+}
+
+// takes a scalar query and returns the scalar
+// requires the type of the query so it can extract the numeric value from the result
+function executeScalar(string ,name, type){
+    return function(callback){
+        var res = null;
+        pg.connect(configO, function (error, client, done) {
+            var query = client.query(string);
+            query.on("row", function (row) {
+                res=row;
+            });
+            query.on("error", function (error) {
+                console.log(string);
+                console.log(error);
+                callback(null, {status:400,error:name + ': ' + error.message});
+            });
+            query.on("end", function (result) {
+                done();
+                return res;
+            });
+        });
+    };
+}
+
+exports.queryRowP = queryRowP;
+exports.queryRowsP = queryRowsP;
+
+exports.testQueryRows = testQueryRows;
+exports.testQuerySingleRow = testQuerySingleRow;
+exports.executeScalar = executeScalar;
