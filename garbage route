@@ -1,0 +1,90 @@
+// lib/routes/people.js
+
+function getGarbage(req,res) {
+    var pghelper = require("../pghelper");
+    var async = require("async");
+    var wantedPage = req.query.wantedPage || 1;
+    var pageSize = req.query.pageSize || 50;
+    var filterVal = req.query.filterVal || "0";
+    var filterCol = req.query.filterCol || "id";
+    var orderBy = req.query.filterCol || "id";
+    var total;
+  
+    var queryTable = "SELECT * FROM garbage WHERE " + filterCol + " >= " + filterVal + " ORDER BY " + orderBy + " LIMIT " + pageSize + " OFFSET " + (wantedPage-1)*pageSize;
+    console.log(queryTable);
+  
+    var queryCount = "Select count(*) FROM garbage WHERE " + filterCol + " >= " + filterVal;
+  
+  
+    /* the query is meant to work like this, but this will not let me check if the wantedPage is beyond the max count
+    async.series({
+        count: pghelper.executeScalar(queryCount, "Garbage Count", "count")
+        },
+        table: pghelper.testQueryRows(queryTable, "Garbage")
+        }
+    },
+    function(error,result){
+    .../*
+    
+  
+    // so I'm trying to write it like this somehow, but it's not working
+    async.series({
+        count: function (callback) {
+            total = pghelper.executeScalar(queryCount, "Garbage Count", "count");
+            console.log("total: ");
+            console.log(total);
+            callback(null,total);
+        },
+        table: function (callback) {
+            if (pageSize * (wantedPage - 1) > total) {
+                callback(null, "Out of bounds error")
+            }
+            pghelper.testQueryRows(queryTable, "Garbage")
+        }
+            /*count: function (callback) {
+                pghelper.queryRow(queryCount, function(error,results){
+                    console.log(results);
+                    total = results[0].count;
+                    callback(error,results);
+                });
+            },
+            garbage: function (callback) {
+                if(pageSize*(wantedPage-1)>total){
+                    callback(null,"Out of bounds error")
+                }
+                pghelper.queryRows(queryTable, callback);
+            }*/
+    },
+    function(error,result){
+        var jsonResult = {
+            "paging": {},
+            "master": {},
+            "detail": [],
+            "result": {
+                "status": "OK",
+                "errors": []
+            }
+        };
+        //console.log("result");
+        //console.log(result);
+        if (result.table.error === undefined){
+            jsonResult.paging.table = result.table;
+        } else{
+            jsonResult.result.status = result.table.status;
+            jsonResult.result.errors.push(result.table.error);
+        }
+        if (result.count.error === undefined){
+            jsonResult.paging.count = result.count;
+        } else{
+            jsonResult.result.status = result.count.status;
+            jsonResult.result.errors.push(result.count.error);
+        }
+        jsonResult.wantedPage = wantedPage;
+        jsonResult.pageSize = pageSize;
+  
+  
+        res.json(200,jsonResult);
+    });
+}
+
+exports.getGarbage = getGarbage;
