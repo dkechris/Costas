@@ -15,8 +15,22 @@ function getGarbage(req,res) {
   
     var queryCount = "Select count(*) FROM garbage WHERE " + filterCol + " >= " + filterVal;
   
+    /* originally I was using a different callback method which "returned" the object instead of passing it directly to the callback function
+    count: function (callback) {
+        pghelper.queryRow(queryCount, function(error,results){
+            console.log(results);
+            total = results[0].count;
+            callback(error,results);
+        });
+    },
+    garbage: function (callback) {
+        if(pageSize*(wantedPage-1)>total){
+            callback(null,"Out of bounds error")
+        }
+        pghelper.queryRows(queryTable, callback);
+    }*/
   
-    /* the query is meant to work like this, but this will not let me check if the wantedPage is beyond the max count
+    /* the new function is meant to work like this, but this will not let me check if the wantedPage is beyond the max count
     async.series({
         count: pghelper.executeScalar(queryCount, "Garbage Count", "count")
         },
